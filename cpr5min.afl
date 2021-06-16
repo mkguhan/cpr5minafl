@@ -1,0 +1,130 @@
+//------------------------------------------------------------------------------
+//  Formula Name	:      HIGHER HIGH LOWER HIGH AFL for Amibroker AFL
+//  Author	:      Guhan Kumar	
+//  Uploader	:      
+//  E-mail		:     
+//  Amibroker Blog	:      
+//  Origin		:      Modified & Collected from different sources.
+//------------------------------------------------------------------------------
+
+_SECTION_BEGIN("Guhan Kumar");
+GfxSetBkMode(1);
+X=750;
+Y=1;
+Font=10;
+GfxSelectFont("Impact",Font*2.2, 550);GfxSetTextColor(colorRed);GfxTextOut("Guhan Kumar",x,y);
+GfxSelectFont("Impact",Font*2.2, 550);GfxSetTextColor(colorGreen);GfxTextOut("Intraday",x+240,Y);
+
+
+
+//------------------------------------------------------------------------------
+
+
+Plot( C, "Close", ParamColor("Color", colorDefault ), styleNoTitle | ParamStyle("Style") | GetPriceStyle() ); 
+
+
+
+
+_SECTION_END();
+
+//------------------------------------------------------------------------------------
+
+_SECTION_BEGIN("Fibnocci Retracement");
+
+PH = PDH = TimeFrameGetPrice("H", inDaily, -1);
+PL = PDL = TimeFrameGetPrice("L", inDaily,-1);
+
+
+R = PDH - PDL;
+
+UP1 = PH + (R * 0.618);
+UP2 = PH + (R * 0.382);
+
+DT1 = PL -  ( R * 0.618);
+DT2 = PL -  ( R * 0.382);
+
+Plot(UP1, "RES", colorRed, styleDashed);
+Plot(UP2, "RES", colorBrown, styleDashed);
+
+Plot(DT1, "SUP", colorGreen, styleDashed);
+Plot(DT2, "SUP", colorBlue, styleDashed);
+
+_SECTION_END();
+
+//-----------------------------------------------------------------------------------------
+
+_SECTION_BEGIN("Open Drive");
+
+
+
+// Previous Days High Low Close
+PDH =  TimeFrameGetPrice( "H", inDaily, -1 );
+PDL =  TimeFrameGetPrice( "L", inDaily, -1 );
+PDC =  TimeFrameGetPrice( "C", inDaily, -1 );
+// Previous Weeks High Low Close
+PWH =  TimeFrameGetPrice( "H", inWeekly, -1 );
+PWL =  TimeFrameGetPrice( "L", inWeekly, -1 );
+PWC =  TimeFrameGetPrice( "C", inWeekly, -1 );
+// Previous Months High Low Close
+PMH =  TimeFrameGetPrice( "H", inMonthly, -1 );
+PML =  TimeFrameGetPrice( "L", inMonthly, -1 );
+PMC =  TimeFrameGetPrice( "C", inMonthly, -1 );
+// Daily CPR
+PV = ( PDH + PDL + PDC ) / 3;
+LB = ( PDH + PDL ) / 2;
+UB = ( PV - LB ) + PV ;
+
+
+// Daily Resistence & Supports
+R1 = 2 * PV - PDL;
+R2 = PV + ( PDH - PDL );
+R3 = R1 + ( PDH - PDL );
+R4 = R3 + ( R2 - R1);
+S1 = 2 * PV - PDH;
+S2 = PV - ( PDH - PDL );
+S3 = S1 - ( PDH - PDL );
+S4 = S3 - ( S1 - S2 );
+
+Per = (abs(LB - UB) *100 ) / PDC;
+
+realBodySize=abs(Ref(Open,0)-Ref(Close,0));
+CandleSize = abs(Ref(High,0)-Ref(Low,0));
+
+PDHR = (abs(PDH - R1) *100 ) / PDC;
+
+
+
+Strength = (realBodySize/CandleSize)*100;
+Range = (C / 100 ) * 2 >= CandleSize;
+
+//Open Drive  O = L 
+
+Open_Drive_Buy = Ref(Open,0) == Ref(Low,0) AND Ref(Open,0) > PDH AND Strength >=80 AND Range > 0 AND PDHR < 0.2 AND TimeNum() <= 091500;
+
+//Open Drive  O = H
+Open_Drive_Sell = Ref(Open,0) == Ref(High,0) AND Ref(Open,0) < PDL AND Strength >=80 AND Range > 0 AND  PDHR < .2 AND TimeNum() == 091500;
+
+// Algo Section Start
+SetPositionSize(50000,spsValue);
+
+// Set Start Time and SquareOFF Time
+start=094500;
+SquareOffTime = 151000;
+
+//Buy Signal
+
+MACD_CB=  Cross( MACD(12,26), SIGNAL(12,26,9) ) AND TimeNum() == 091500;
+MACD_CS=  Cross(  SIGNAL(12,26,9), MACD(12,26) ) AND TimeNum() == 091500;
+
+BUY = Per < 1 AND Ref(Open,0) < PDH AND Ref(Open,0) < R1 AND Ref(Close,0) > PDH AND Ref(Close,0) > R1 AND PDHR < 0.2 AND abs(LB - UB) < 2 AND TimeNum() == 091500;
+SELL = Per < 1 AND Ref(Open,0) > PDL AND Ref(Open,0) > S1 AND Ref(Close,0) < PDL AND Ref(Close,0) < S1 AND PDHR < 0.2 AND abs(LB - UB) < 2 AND TimeNum() == 091500;
+
+
+Filter =  BUY OR SELL ;
+AddColumn(abs(LB - UB), "Range");
+AddColumn(Per,"Percentage");
+AddColumn(PDHR,"Percentage Range");
+AddColumn(MACD_CS, "MACD Sell");
+AddColumn(MACD_CB, "MACD Buy");
+
+
